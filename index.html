@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LandShield India — AI-Powered Landslide Risk Monitoring &amp; Response Platform</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css"/>
+<link rel="stylesheet" href="css/styles.css">
+<script>
+  // Apply saved theme before first paint to avoid a light/dark flash.
+  (function(){
+    try{
+      var saved = localStorage.getItem("lsn-theme");
+      if(saved === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    }catch(e){}
+  })();
+</script>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <aside class="sidebar" id="sidebar">
+    <div class="collapse-btn" id="collapseBtn">‹</div>
+    <div class="brand">
+      <div class="brand-mark">LS</div>
+      <div class="brand-text">LANDSHIELD INDIA<small>AI-Powered Landslide Risk Monitoring &amp; Response</small></div>
+    </div>
+    <ul class="nav-list" id="navList">
+      <li class="nav-item active" data-page="dashboard"><span class="ico">▣</span><span class="nav-label">Dashboard</span></li>
+      <li class="nav-item" data-page="riskmap"><span class="ico">◎</span><span class="nav-label">Risk Map</span></li>
+      <li class="nav-item" data-page="alerts"><span class="ico">▲</span><span class="nav-label">Alerts</span></li>
+      <li class="nav-item" data-page="fieldreports"><span class="ico">✎</span><span class="nav-label">Field Reports</span></li>
+      <li class="nav-item" data-page="analytics"><span class="ico">◆</span><span class="nav-label">Analytics</span></li>
+      <li class="nav-item" data-page="about"><span class="ico">ℹ</span><span class="nav-label">About</span></li>
+    </ul>
+    <div class="sidebar-foot">
+      <div class="sidebar-foot-text">6,707 GSI sample points<br>North-East &amp; hill states, India</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title-block">
+        <div class="eyebrow">SIH26001</div>
+        <div class="topbar-title" id="pageTitle">Dashboard</div>
+        <div class="topbar-sub" id="pageSub">V1 landslide susceptibility model — cleaned GSI sample points</div>
+      </div>
+      <div class="topbar-right">
+        <span class="status-pill"><span class="status-dot"></span>System Operational</span>
+        <button class="theme-toggle-btn" id="themeToggleBtn" type="button" title="Switch between light and dark mode" aria-label="Toggle light or dark theme">
+          <span id="themeToggleIcon">🌙</span><span id="themeToggleLabel">Dark</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ================= DASHBOARD ================= -->
+      <section class="page active" id="page-dashboard">
+        <p class="section-sub">Overview of the V1 landslide susceptibility model — an XGBoost classifier trained on 4 terrain and historical-inventory features across GSI-documented landslide points and background samples in North-East and hill-state India.</p>
+
+        <div class="kpi-grid" id="kpiGrid"></div>
+
+        <div class="card" style="padding:0; overflow:hidden; margin-bottom:18px;">
+          <div style="padding:18px 20px 0;">
+            <div class="card-title">V1 Model Risk Map — Existing GSI Sample Points</div>
+            <div class="card-subtitle">Susceptibility scores on the cleaned GSI training/test points used to build the V1 model. Click "Risk Map" in the sidebar for the full view with location search.</div>
+          </div>
+          <div style="padding:0 20px 20px;">
+            <div class="map-wrap">
+              <iframe class="map-frame short" src="../maps/landslide_v1_risk_map.html" title="V1 model risk map preview"></iframe>
+            </div>
+            <div class="map-caption">This shows model scores on the existing 6,707 GSI sample points used to train/test V1.</div>
+          </div>
+        </div>
+
+        <div class="grid-2col">
+          <div class="card">
+            <div class="card-title">Dataset composition</div>
+            <div class="card-subtitle">Real counts from the cleaned V1 training table</div>
+            <div class="info-grid">
+              <div class="info-item"><div class="il">Documented landslide points</div><div class="iv" id="dashPositives">—</div></div>
+              <div class="info-item"><div class="il">Background / pseudo-negative points</div><div class="iv" id="dashNegatives">—</div></div>
+              <div class="info-item"><div class="il">States/UTs covered</div><div class="iv" id="dashStates">—</div></div>
+              <div class="info-item"><div class="il">Model features (V1)</div><div class="iv">4 — elevation, slope, historical density, historical distance</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Quick links</div>
+            <div class="card-subtitle">Jump to a section</div>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+              <button class="btn block" onclick="LSN_goToPage('riskmap')">◎ Explore risk map &amp; locations</button>
+              <button class="btn block" onclick="LSN_goToPage('alerts')">▲ View elevated-risk points</button>
+              <button class="btn block" onclick="LSN_goToPage('fieldreports')">✎ Submit a field report</button>
+              <button class="btn block" onclick="LSN_goToPage('analytics')">◆ View analytics</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= RISK MAP ================= -->
+      <section class="page" id="page-riskmap">
+        <h2 class="section-heading">Risk map</h2>
+        <p class="section-sub">V1 Model Risk Map — Existing GSI Sample Points. Colored by susceptibility band: 0–25 Low, 25–50 Moderate, 50–75 High, 75–100 Very High. This map shows scores on the existing cleaned GSI sample points only.</p>
+        <div class="card" style="padding:0; overflow:hidden; margin-bottom:20px;">
+          <div class="map-wrap">
+            <div id="riskMapFull" class="map-frame"></div>
+          </div>
+          <div style="padding:12px 20px 18px;">
+            <div class="map-caption">Base layer (Normal / Satellite / Terrain) and risk-category layers are controlled from the panel in the top-right of the map. Use the state/city selector in the top-left to jump to a region. Scores shown are on the existing 6,707 GSI sample points.</div>
+          </div>
+        </div>
+
+        <h2 class="section-heading">Location details</h2>
+        <p class="section-sub">Search or filter the 6,707 GSI sample points to inspect a specific location's model output.</p>
+        <div class="filter-bar">
+          <input type="text" id="locSearch" placeholder="Search by state, e.g. Sikkim, Mizoram...">
+          <select id="locBandFilter">
+            <option value="all">All risk levels</option>
+            <option value="LOW">Low</option>
+            <option value="MODERATE">Moderate</option>
+            <option value="HIGH">High</option>
+            <option value="VERY HIGH">Very High</option>
+          </select>
+          <select id="locStateFilter"><option value="all">All states</option></select>
+          <span class="result-count" id="locResultCount"></span>
+        </div>
+        <div class="point-row-head">
+          <span>State / coordinates</span><span>Risk score</span><span>Category</span><span>GSI label</span><span>Density</span>
+        </div>
+        <div class="point-list" id="locList"></div>
+        <div class="load-more-row"><button class="btn" id="locLoadMore">Load 50 more</button></div>
+      </section>
+
+      <!-- ================= ALERTS ================= -->
+      <section class="page" id="page-alerts">
+        <h2 class="section-heading">Alerts</h2>
+        <p class="section-sub">Points classified <strong>High</strong> or <strong>Very High</strong> susceptibility by the V1 model, sorted by risk score. These are model outputs on existing GSI sample points, not live monitoring alerts.</p>
+        <div class="kpi-grid" id="alertKpiGrid" style="grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));"></div>
+        <div class="filter-bar">
+          <input type="text" id="alertSearch" placeholder="Search by state...">
+          <select id="alertBandFilter">
+            <option value="elevated">High + Very High</option>
+            <option value="VERY HIGH">Very High only</option>
+            <option value="HIGH">High only</option>
+          </select>
+          <span class="result-count" id="alertResultCount"></span>
+        </div>
+        <div class="point-row-head">
+          <span>State / coordinates</span><span>Risk score</span><span>Category</span><span>GSI label</span><span>Density</span>
+        </div>
+        <div class="point-list" id="alertList"></div>
+        <div class="load-more-row"><button class="btn" id="alertLoadMore">Load 50 more</button></div>
+      </section>
+
+      <!-- ================= FIELD REPORTS ================= -->
+      <section class="page" id="page-fieldreports">
+        <h2 class="section-heading">Field Report Submission</h2>
+        <div class="prototype-note">
+          <span>✎</span>
+          <div><strong>Field verification workflow.</strong> Submitted reports are retained for verification and can support future model-assisted risk assessment.</div>
+        </div>
+        <div class="grid-2col">
+          <div class="card">
+            <div class="form-row">
+              <label>State / Union Territory</label>
+              <select id="frState"></select>
+            </div>
+            <div class="form-row">
+              <label>Location description</label>
+              <input type="text" id="frLocationText" placeholder="e.g. Near NH-702, 3km from Aizawl town">
+            </div>
+            <div class="form-row">
+              <label>Observation type</label>
+              <div class="obs-type-grid" id="obsTypeGrid">
+                <div class="obs-type-opt" data-val="Visible crack">Visible crack</div>
+                <div class="obs-type-opt" data-val="Rockfall">Rockfall</div>
+                <div class="obs-type-opt" data-val="Soil movement">Soil movement</div>
+                <div class="obs-type-opt" data-val="Road blockage">Road blockage</div>
+                <div class="obs-type-opt" data-val="Other">Other</div>
+              </div>
+            </div>
+            <div class="form-row">
+              <label>Description</label>
+              <textarea id="frDescription" placeholder="Describe what you observed"></textarea>
+            </div>
+            <div class="form-row">
+              <label>Field evidence</label>
+              <input type="file" id="frImageInput" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" style="display:none;">
+              <label class="upload-zone" for="frImageInput" id="uploadZone">
+                <span id="uploadZoneText">＋ Upload field evidence (JPG, JPEG, PNG or WEBP)</span>
+              </label>
+              <div id="uploadError" class="form-error" style="display:none;"></div>
+
+              <div id="imagePreviewBlock" class="file-info-card" style="display:none;">
+                <img id="imagePreviewThumb" class="file-info-thumb" alt="Selected evidence preview">
+                <div class="file-info-details">
+                  <div class="card-title" style="margin:0 0 6px; font-size:13px;">File information</div>
+                  <div class="file-info-row"><span>Filename</span><span id="fileInfoName"></span></div>
+                  <div class="file-info-row"><span>Type</span><span id="fileInfoType"></span></div>
+                  <div class="file-info-row"><span>Size</span><span id="fileInfoSize"></span></div>
+                  <button type="button" class="btn small" id="btnRemoveImage" style="margin-top:8px;">Remove image</button>
+                </div>
+              </div>
+            </div>
+
+            <div id="aiVerificationPreview" class="xai-box" style="display:none;">
+              <div class="drawer-section-label" style="margin-top:0;">AI verification preview</div>
+              <div class="verify-flow">
+                <span>Photo upload</span>→<span>Metadata analysis</span>→<span>AI authenticity analysis</span>→<span>Location/time consistency</span>→<span>Verification result</span>
+              </div>
+              <div class="verify-check-row"><span>Image metadata</span><span class="verify-status">Awaiting AI analysis</span></div>
+              <div class="verify-check-row"><span>Image authenticity</span><span class="verify-status">Awaiting AI analysis</span></div>
+              <div class="verify-check-row"><span>Location consistency</span><span class="verify-status">Awaiting AI analysis</span></div>
+              <div class="verify-check-row"><span>Evidence confidence</span><span class="verify-status">Awaiting AI analysis</span></div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button class="btn" id="btnUseLocation">◎ Use current location</button>
+              <button class="btn primary" id="btnSubmitReport">Submit report</button>
+            </div>
+            <div id="locationCaptured" class="result-count" style="margin-top:8px; display:none;"></div>
+            <div id="reportSuccess" style="display:none;" class="report-success">
+              <span class="risk-dot low"></span>
+              <div>
+                <div style="font-weight:600;">Report submitted successfully.</div>
+                <div style="font-size:12px; color:var(--text-secondary); margin-top:2px;">Status: <strong>Pending verification</strong> — our model will verify the submitted evidence and location data to assess its relevance before it can influence the Risk Score.</div>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Why field verification matters</div>
+            <p style="font-size:12.5px; color:var(--text-secondary); line-height:1.7;">
+              The model score is a susceptibility estimate learned from terrain and historical-inventory features — it is not a confirmed ground observation. Field reports let officers and citizens verify conditions on the ground before any response is dispatched.
+            </p>
+            <p style="font-size:12.5px; color:var(--text-secondary); line-height:1.7; margin-top:10px;">
+              Field verification workflow. Submitted reports are retained for verification and can support future model-assisted risk assessment.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================= ANALYTICS ================= -->
+      <section class="page" id="page-analytics">
+        <h2 class="section-heading">Analytics</h2>
+        <p class="section-sub">Real V1 statistics only — nothing on this page is estimated or fabricated.</p>
+
+        <div class="grid-2col" style="margin-bottom:16px;">
+          <div class="chart-card">
+            <div class="card-title">Susceptibility band distribution</div>
+            <div class="card-subtitle">All 6,707 cleaned GSI sample points</div>
+            <div class="chart-canvas-wrap"><canvas id="chartBands"></canvas></div>
+          </div>
+          <div class="chart-card">
+            <div class="card-title">Dataset class balance</div>
+            <div class="card-subtitle">Documented landslide points vs. background points</div>
+            <div class="chart-canvas-wrap"><canvas id="chartClass"></canvas></div>
+          </div>
+        </div>
+
+        <div class="chart-card">
+          <div class="card-title">Points per state / UT</div>
+          <div class="card-subtitle">Distribution of the 6,707 sample points across covered states</div>
+          <div id="stateBarList"></div>
+        </div>
+      </section>
+
+      <!-- ================= ABOUT ================= -->
+      <section class="page" id="page-about">
+        <h2 class="section-heading">About LandShield India</h2>
+        <p class="section-sub">A landslide susceptibility assessment platform for North-East and hill-state India, currently at V1.</p>
+
+        <div class="grid-2col" style="margin-bottom:16px;">
+          <div class="card">
+            <div class="card-title">Model</div>
+            <div class="info-grid">
+              <div class="info-item"><div class="il">Model type</div><div class="iv">XGBoost binary classifier</div></div>
+              <div class="info-item"><div class="il">Model name</div><div class="iv">Landslide Susceptibility / Risk Classification Model</div></div>
+              <div class="info-item"><div class="il">Target</div><div class="iv">landslide_event (GSI-documented vs. background point)</div></div>
+              <div class="info-item"><div class="il">Train/test split</div><div class="iv">Spatial split by 0.5&deg; grid cell (not random)</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Training data</div>
+            <div class="info-grid">
+              <div class="info-item"><div class="il">Cleaned dataset</div><div class="iv">6,707 rows</div></div>
+              <div class="info-item"><div class="il">Positive (documented landslide)</div><div class="iv">2,223</div></div>
+              <div class="info-item"><div class="il">Negative (background)</div><div class="iv">4,484</div></div>
+              <div class="info-item"><div class="il">States/UTs covered</div><div class="iv" id="aboutStates">—</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">Model features</div>
+          <div class="card-subtitle">4 features used by the current (V1) model</div>
+          <div class="info-grid">
+            <div class="info-item"><div class="il">elevation_m</div><div class="iv">Elevation, in metres</div></div>
+            <div class="info-item"><div class="il">slope_deg</div><div class="iv">Terrain slope, in degrees</div></div>
+            <div class="info-item"><div class="il">historical_landslide_density</div><div class="iv">Count of documented landslides within 10km</div></div>
+            <div class="info-item"><div class="il">historical_landslide_distance</div><div class="iv">Distance to nearest documented landslide, in km</div></div>
+          </div>
+        </div>
+
+        <div class="grid-2col" style="margin-bottom:16px;">
+          <div class="card">
+            <div class="card-title">Evaluation</div>
+            <div class="card-subtitle">Held-out spatial test split</div>
+            <div class="info-grid">
+              <div class="info-item"><div class="il">Accuracy</div><div class="iv">0.9536</div></div>
+              <div class="info-item"><div class="il">Precision</div><div class="iv">0.9455</div></div>
+              <div class="info-item"><div class="il">Recall</div><div class="iv">0.8490</div></div>
+              <div class="info-item"><div class="il">F1</div><div class="iv">0.8946</div></div>
+              <div class="info-item"><div class="il">ROC-AUC</div><div class="iv">0.9657</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Feature importance / explainability</div>
+            <div class="card-subtitle">Relative contribution to the trained model</div>
+            <div id="featureImportanceList"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">Data sources</div>
+          <div class="info-grid">
+            <div class="info-item"><div class="il">Landslide inventory</div><div class="iv">Geological Survey of India (GSI) dated landslide records</div></div>
+            <div class="info-item"><div class="il">Elevation &amp; slope</div><div class="iv">Digital elevation tiles (terrain features script)</div></div>
+            <div class="info-item"><div class="il">Historical density &amp; distance</div><div class="iv">Computed against the full GSI landslide inventory</div></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">How to read the risk score</div>
+          <p style="font-size:12.5px; color:var(--text-secondary); line-height:1.7;">
+            The risk score shown throughout this platform is a relative susceptibility score learned from historical patterns — it is <strong>not</strong> a scientifically validated landslide probability, and the model does <strong>not</strong> predict the occurrence, timing, or exact location of a specific future landslide. It should be used alongside official advisories and field verification, not in place of them.
+          </p>
+        </div>
+      </section>
+
+    </div>
+
+    <div class="app-footer">
+      <strong>LandShield India | SIH26001</strong><br>
+      AI-assisted decision support — not a replacement for official disaster warnings.
+    </div>
+  </div>
+</div>
+
+<!-- Location detail drawer -->
+<div class="drawer-overlay" id="drawerOverlay">
+  <div class="drawer" id="drawer"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
