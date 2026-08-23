@@ -1,0 +1,44 @@
+{
+  "model_name": "Landslide Susceptibility / Risk Classification Model",
+  "features_used": [
+    "elevation_m",
+    "slope_deg",
+    "historical_landslide_density",
+    "historical_landslide_distance"
+  ],
+  "target": "landslide_event",
+  "random_seed": 42,
+  "grid_size_deg": 0.5,
+  "train_rows": 5652,
+  "test_rows": 1055,
+  "train_class_counts": {
+    "0": 3674,
+    "1": 1978
+  },
+  "test_class_counts": {
+    "0": 810,
+    "1": 245
+  },
+  "accuracy": 0.9535545023696682,
+  "precision": 0.9454545454545454,
+  "recall": 0.8489795918367347,
+  "f1_score": 0.8946236559139785,
+  "roc_auc": 0.9657294028722601,
+  "confusion_matrix": {
+    "true_negative": 798,
+    "false_positive": 12,
+    "false_negative": 37,
+    "true_positive": 208
+  },
+  "feature_importance": {
+    "historical_landslide_distance": 0.728202223777771,
+    "historical_landslide_density": 0.182019904255867,
+    "slope_deg": 0.045324552804231644,
+    "elevation_m": 0.044453322887420654
+  },
+  "disclaimer": "Landslide Susceptibility / Risk Classification Model: predicted_score is a relative risk/susceptibility score learned from historical patterns, NOT a scientifically validated landslide probability, and this model does NOT predict the occurrence, timing, or exact location of a specific future landslide event.",
+  "known_limitations": [
+    "Possible temporal leakage: historical_landslide_density and historical_landslide_distance were computed in compute_historical_susceptibility_gsi.py against the full GSI inventory (35,716 records) with no date cutoff. For samples that are not the most recent landslide in their area, these two features may include landslides that occurred AFTER the sample's own date. This was not fixed here because the raw inventory file (gsi_landslide_inventory_normalized.csv) needed to recompute time-safe density/distance per sample date was not provided in this handoff. Treat these metrics as an optimistic upper bound until the historical features are recomputed with a per-sample date cutoff.",
+    "V1 uses only 4 static/terrain features (elevation, slope, historical density, historical distance). rainfall_mm, rainfall_3day_mm, soil_moisture, and ndvi_mean are excluded from V1 due to high missingness in the current table and are reserved for a later model version."
+  ]
+}
